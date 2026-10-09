@@ -14,7 +14,8 @@ queues and Redis Streams where the two models differ.
 | Component | Status |
 |---|---|
 | Local stack: single-node Kafka 4.3.1 in KRaft mode and a web UI | done |
-| Labs | planned |
+| Lab: keys and partitions | done |
+| Other labs | planned |
 
 ## Stack
 
@@ -39,6 +40,21 @@ make down    # remove the containers together with all topics and offsets
 
 Published ports bind to `127.0.0.1`. The broker accepts PLAINTEXT connections without authentication and is meant
 for local use only.
+
+## Labs
+
+Each lab is a Go program under `labs/`. Run it from the repository root while the local stack is up.
+
+| Lab | Command | Shows |
+|---|---|---|
+| `labs/keypartition` | `go run ./labs/keypartition` | The partition and offset of each keyed and unkeyed record under the default partitioner |
+
+The key partition lab produces to `lab.products`, which must exist with three partitions:
+
+```sh
+docker compose -f deployments/docker-compose.yml exec -T kafka /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server localhost:9092 --create --topic lab.products --partitions 3 --replication-factor 1
+```
 
 ## References
 
