@@ -1,0 +1,12 @@
+# Environment files hold local secrets. Only the example file is tracked.
+.env
+.env.*
+!.env.example
+
+# Build output
+bin/
+*.exe
+
+# Test artifacts
+*.out
+*.test

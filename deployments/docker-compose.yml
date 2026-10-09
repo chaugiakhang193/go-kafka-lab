@@ -1,0 +1,60 @@
+name: go-kafka-lab
+
+services:
+  kafka:
+    image: apache/kafka:4.3.1
+    hostname: kafka
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      # The image uses its bundled server.properties only when no configuration
+      # is passed. With environment variables every property a KRaft node needs
+      # to start is listed here.
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: PLAINTEXT_HOST://:9092,PLAINTEXT://:19092,CONTROLLER://:9093
+      # Clients on the host connect through the published port and resolve
+      # localhost. Containers on the compose network resolve the service name.
+      # Each listener advertises the address its own clients can reach.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT://kafka:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # The image falls back to a placeholder cluster ID meant to be replaced by
+      # a unique one.
+      CLUSTER_ID: AmLNYveCL6qOhl7Dp8F-NA
+      # Internal topics default to three replicas, and the transaction and
+      # share-group state topics to two in-sync replicas. A single broker holds
+      # one replica of each.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      # The coordinator starts the first rebalance of a new group without
+      # waiting the default 3 s for more members to join.
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # The log directory lives inside the container. Removing the container
+      # discards every topic, committed offset and group.
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+    healthcheck:
+      # An open port does not prove the broker serves requests. The quorum status
+      # command exits non-zero unless the broker answers and the KRaft quorum has
+      # a leader.
+      test: ["CMD", "/opt/kafka/bin/kafka-metadata-quorum.sh", "--bootstrap-server", "localhost:9092", "describe", "--status"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  kafka-ui:
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
+    ports:
+      - "127.0.0.1:8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: lab
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
+    depends_on:
+      kafka:
+        condition: service_healthy
